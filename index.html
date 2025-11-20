@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
     
     <style>
+        /* Base styling for the whole page */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
@@ -25,7 +26,7 @@
         }
         /* This is the black box where your Pygame will appear */
         #pygame-canvas-container {
-            /* Set this to your Pygame window's size */
+            /* Set this size to match your Pygame window's size (e.g., 800x600) */
             width: 800px; 
             height: 600px;
             border: 2px solid #555;
@@ -48,7 +49,7 @@
     <div id="pygame-canvas-container">
         <!-- A message to show while the game is loading -->
         <div id="loading-message">
-            Loading Python and Pygame assets...<br>
+            Loading Python assets...<br>
             This may take 15-30 seconds on the first load.
         </div>
     </div>
@@ -63,17 +64,16 @@
                 loadingMessage.innerText += "\nLoading Pyodide (Python interpreter)...";
                 const pyodide = await loadPyodide();
                 
-                // 2. Load the 'pygame-web' library
-                loadingMessage.innerText += "\nInstalling pygame-web library...";
-                await pyodide.loadPackage("micropip");
-                const micropip = pyodide.pyimport("micropip");
-                await micropip.install('https://pyodide-packages.readthedocs.io/en/stable/pyodide-lock.json#pygame-web');
+                // 2. Load the 'pygame-web' package directly (This is the fix)
+                // We use pyodide.loadPackage to bypass the problematic micropip installer.
+                loadingMessage.innerText += "\nLoading pygame-web library directly...";
+                await pyodide.loadPackage("pygame-web");
                 
                 // 3. Fetch your Python game file (space_shooter.py)
                 loadingMessage.innerText += "\nFetching space_shooter.py...";
                 const response = await fetch('space_shooter.py');
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch space_shooter.py: ${response.statusText}`);
+                    throw new Error(`Failed to fetch space_shooter.py: ${response.statusText}. Did you commit space_shooter.py?`);
                 }
                 const pythonCode = await response.text();
                 
@@ -81,7 +81,6 @@
                 loadingMessage.innerText = "Starting game...";
                 
                 // This tells Pygame to use the div#pygame-canvas-container
-                // as its display
                 pyodide.globals.set("PYGAME_CANVAS_ID", "pygame-canvas-container");
                 
                 await pyodide.runPythonAsync(pythonCode);
@@ -100,4 +99,4 @@
         runPygame();
     </script>
 </body>
-</html>
+</html><!--  -->
