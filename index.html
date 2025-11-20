@@ -67,7 +67,7 @@
                 loadingMessage.innerText += "\nInstalling pygame-web library...";
                 await pyodide.loadPackage("micropip");
                 const micropip = pyodide.pyimport("micropip");
-                await micropip.install('pygame-web');
+                await micropip.install('https://pyodide-packages.readthedocs.io/en/stable/pyodide-lock.json#pygame-web');
                 
                 // 3. Fetch your Python game file (space_shooter.py)
                 loadingMessage.innerText += "\nFetching space_shooter.py...";
