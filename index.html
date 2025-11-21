@@ -31,7 +31,7 @@
     <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
         <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
         <!-- Confirmed Fix: This version tag helps us confirm the latest code is running. -->
-        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v11)</span></div>
+        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v12)</span></div>
         
         <!-- Loading Bar -->
         <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
@@ -82,19 +82,27 @@
                     }
                 });
 
-                console.log("Pyodide loaded. Installing official Pygame package...");
-                updateStatus("Installing Pygame package (via Pyodide CDN)...", 90);
-                
-                // --- THE CLEAN FIX ---
-                // Load the standard 'pygame' package from Pyodide's reliable CDN.
-                await pyodide.loadPackage("pygame");
-                // ---------------------
+                console.log("Pyodide loaded. Installing micropip and dependencies...");
+                updateStatus("Loading package installer (micropip) and Pygame dependencies...", 85);
 
-                console.log("Pygame installed. Fetching your game code: " + GAME_FILE_NAME);
+                await pyodide.loadPackage("micropip");
+                
+                // --- THE DEPENDENCY ASSEMBLY FIX (v12) ---
+                // Install core dependencies first using pyodide.loadPackage for reliable loading, 
+                // then use micropip to ensure pygame-ce is included.
+                await pyodide.loadPackage(["SDL", "tcl", "tk", "sqlite"]);
+                
+                await pyodide.runPythonAsync(
+                    "import micropip\n" +
+                    "await micropip.install('pygame-ce')" // Ask micropip to find the latest version now that dependencies are met
+                );
+                // ------------------------------------------
+
+                console.log("Pygame and dependencies installed. Fetching your game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
                 // Aggressive cache-bust version
-                const response = await fetch(GAME_FILE_NAME + "?v=11"); 
+                const response = await fetch(GAME_FILE_NAME + "?v=12"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
@@ -111,14 +119,12 @@
                     -3); 
                 console.log("Importing Python module: " + moduleName);
                 
-                // This is where your main.py (currently a print statement) will run!
                 await pyodide.runPythonAsync("import " + moduleName);
 
                 console.log("Game import successful. Hiding loading screen.");
                 loadingScreen.remove();
                 gameContainer.classList.remove('hidden');
                 
-                // If main.py runs and prints, the test is done!
                 console.log("SUCCESS! The environment is ready. Check your game!");
 
 
