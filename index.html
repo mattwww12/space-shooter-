@@ -31,7 +31,7 @@
     <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
         <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
         <!-- Confirmed Fix: This version tag helps us confirm the latest code is running. -->
-        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v15)</span></div>
+        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v16)</span></div>
         
         <!-- Loading Bar -->
         <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
@@ -83,24 +83,27 @@
                     }
                 });
 
-                console.log("Pyodide loaded. Installing micropip and pygame-wasm...");
-                updateStatus("Loading Pygame-WASM package installer...", 85);
+                console.log("Pyodide loaded. Installing micropip and Pygame (via direct wheel URL)...");
+                updateStatus("Installing Pygame dependencies...", 85);
 
                 await pyodide.loadPackage("micropip");
                 
-                // --- THE PYGAME-WASM FIX (v15) ---
-                // Install the specific Pygame WebAssembly package via micropip.
+                // --- THE DIRECT WHEEL FIX (v16) ---
+                // Install pygame-ce by providing the direct URL to the compiled wheel file.
+                // This bypasses the faulty PyPI index lookup.
+                const PYGAME_CE_WHEEL_URL = "https://files.pythonhosted.org/packages/b9/ed/8d43d1a49f753579192d6e043372c0d80c05718a383d47f920f26955a8a1/pygame_ce-2.4.1-cp311-cp311-manylinux_2_17_wasm32_shim.whl";
+                
                 await pyodide.runPythonAsync(
                     "import micropip\n" +
-                    "await micropip.install('pygame-wasm')"
+                    `await micropip.install('${PYGAME_CE_WHEEL_URL}')`
                 );
                 // ------------------------------------------
 
-                console.log("Pygame-WASM installed! Fetching your game code: " + GAME_FILE_NAME);
+                console.log("Pygame installed successfully! Fetching your game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
                 // Aggressive cache-bust version
-                const response = await fetch(GAME_FILE_NAME + "?v=15"); 
+                const response = await fetch(GAME_FILE_NAME + "?v=16"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
