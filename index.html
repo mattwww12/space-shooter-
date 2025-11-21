@@ -97,11 +97,11 @@
                     "await micropip.install('pygame-ce')"
                 );
 
-                console.log("Pygame installed. Fetching game code: " + GAME_FILE_NAME);
+                console.log("Pygame installed. Fetching your game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
-                // Use a cache-busting query
-                const response = await fetch(GAME_FILE_NAME + "?v=5"); 
+                // --- CACHE BUST: Changed to v=6 to force a refresh ---
+                const response = await fetch(GAME_FILE_NAME + "?v=6"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
