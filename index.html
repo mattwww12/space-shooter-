@@ -48,7 +48,8 @@
 
 
     <!-- Pyodide Loader Script -->
-    <script type(="module")>
+    <!-- *** CRITICAL FIX: Corrected typo 'type(="module")' to 'type="module"' *** -->
+    <script type="module">
         // Using v0.25.0
         import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
 
@@ -93,13 +94,11 @@
                 console.log("Pygame installed. Fetching game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
-                // --- CACHE BUSTING FIX: Added '?v=2' to the file request ---
-                const response = await fetch(GAME_FILE_NAME + "?v=2"); 
+                // --- CACHE BUSTING: Incremented to v=3 ---
+                const response = await fetch(GAME_FILE_NAME + "?v=3"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
-                    // This is the line (approx 95) that was failing.
-                    // Simplified to a basic string to guarantee no syntax error.
                     throw new Error("ERROR: Failed to fetch main.py. File not found.");
                 }
                 const pythonCode = await response.text();
