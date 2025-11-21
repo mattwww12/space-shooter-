@@ -1357,6 +1357,6 @@ save_config()
 pygame.quit()
 sys.exit()
 
-
+start_game()
 
 
