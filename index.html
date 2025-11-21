@@ -49,7 +49,7 @@
 
     <!-- Pyodide Loader Script -->
     <script type="module">
-        // --- FIX: Switched back to v0.25.0 to resolve the 'loadPyodide' export error ---
+        // Switched back to v0.25.0 to resolve the 'loadPyodide' export error
         import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
 
         const loadingScreen = document.getElementById('loading-screen');
@@ -74,8 +74,9 @@
                 
                 const pyodide = await loadPyodide({
                     onProgress: ({ totalBytes, loadedBytes }) => {
+                        // Use simple string concatentation here
                         const progress = Math.min(90, 10 + Math.floor((loadedBytes / totalBytes) * 80));
-                        updateStatus(`Downloading modules... (${(loadedBytes / 1024 / 1024).toFixed(1)}MB)`, progress);
+                        updateStatus("Downloading modules... (" + (loadedBytes / 1024 / 1024).toFixed(1) + "MB)", progress);
                     }
                 });
 
@@ -92,7 +93,8 @@
                 // --- Step 3: Fetch the main game file (main.py) ---
                 const response = await fetch(GAME_FILE_NAME);
                 if (!response.ok) {
-                    throw new Error(\`Failed to fetch ${GAME_FILE_NAME}. Status: ${response.status}\`);
+                    // *** FIX APPLIED HERE: Replaced template literal with simple string ***
+                    throw new Error("Failed to fetch " + GAME_FILE_NAME + ". Status: " + response.status);
                 }
                 const pythonCode = await response.text();
                 
@@ -115,9 +117,10 @@
             } catch (error) {
                 console.error("Pyodide or Pygame execution failed:", error);
                 
+                // *** FIX APPLIED HERE: Replaced template literals with simple strings ***
                 const errorMessage = error.name === 'PythonError' ? 
-                                     `PYTHON CODE CRASHED. Check the browser console (F12) for the full traceback in red text!` : 
-                                     `Loading Failed: ${error.message}.`;
+                                     "PYTHON CODE CRASHED. Check the browser console (F12) for the full traceback in red text!" : 
+                                     "Loading Failed: " + error.message;
                 
                 updateStatus(errorMessage, 100);
                 loadingMessage.classList.add('text-red-500', 'font-bold');
