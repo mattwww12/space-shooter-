@@ -48,9 +48,11 @@
 
 
     <!-- Pyodide Loader Script -->
-    <script type="module">
-        // Switched back to v0.25.0 to resolve the 'loadPyodide' export error
+    <script type(="module")>
+        // Using v0.25.0
         import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
+
+        console.log("JavaScript module loaded successfully.");
 
         const loadingScreen = document.getElementById('loading-screen');
         const loadingMessage = document.getElementById('loading-message');
@@ -62,7 +64,7 @@
 
         function updateStatus(message, progress) {
             loadingMessage.textContent = message;
-            progressBar.style.width = `${progress}%`;
+            progressBar.style.width = String(progress) + "%"; // Use simple string concat
             if (progress < 90) {
                 debugInfo.classList.remove('hidden');
             }
@@ -70,56 +72,57 @@
         
         async function initializePyodide() {
             try {
+                console.log("Initializing Pyodide...");
                 updateStatus("Downloading core Python environment...", 10);
                 
                 const pyodide = await loadPyodide({
                     onProgress: ({ totalBytes, loadedBytes }) => {
-                        // Use simple string concatentation here
                         const progress = Math.min(90, 10 + Math.floor((loadedBytes / totalBytes) * 80));
                         updateStatus("Downloading modules... (" + (loadedBytes / 1024 / 1024).toFixed(1) + "MB)", progress);
                     }
                 });
 
+                console.log("Pyodide loaded. Installing packages...");
                 updateStatus("Installing Pygame dependencies (pygame-ce)...", 90);
                 
-                // --- Step 2: Install Pygame-ce ---
-                await pyodide.runPythonAsync(`
-                    import micropip
-                    await micropip.install("pygame-ce")
-                `);
+                await pyodide.runPythonAsync(
+                    "import micropip\n" +
+                    "await micropip.install('pygame-ce')"
+                );
 
+                console.log("Pygame installed. Fetching game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
-                // --- Step 3: Fetch the main game file (main.py) ---
-                const response = await fetch(GAME_FILE_NAME);
+                // --- CACHE BUSTING FIX: Added '?v=2' to the file request ---
+                const response = await fetch(GAME_FILE_NAME + "?v=2"); 
+                
+                console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
-                    // *** FIX APPLIED HERE: Replaced template literal with simple string ***
-                    throw new Error("Failed to fetch " + GAME_FILE_NAME + ". Status: " + response.status);
+                    // This is the line (approx 95) that was failing.
+                    // Simplified to a basic string to guarantee no syntax error.
+                    throw new Error("ERROR: Failed to fetch main.py. File not found.");
                 }
                 const pythonCode = await response.text();
                 
-                // Inject the code into the Pyodide file system
+                console.log("Python code fetched. Writing to virtual file system...");
                 pyodide.FS.writeFile(GAME_FILE_NAME, pythonCode, { encoding: "utf8" });
 
                 updateStatus("Running game...", 100);
-
-                // --- Step 4: Run the Python Code ---
+                
                 const moduleName = GAME_FILE_NAME.slice(0, -3); 
-                await pyodide.runPythonAsync(`
-                    import ${moduleName}
-                `);
+                console.log("Importing Python module: " + moduleName);
+                
+                await pyodide.runPythonAsync("import " + moduleName);
 
-                // --- Step 5: Clean up the loading screen ---
+                console.log("Game import successful. Hiding loading screen.");
                 loadingScreen.remove();
                 gameContainer.classList.remove('hidden');
-
 
             } catch (error) {
                 console.error("Pyodide or Pygame execution failed:", error);
                 
-                // *** FIX APPLIED HERE: Replaced template literals with simple strings ***
                 const errorMessage = error.name === 'PythonError' ? 
-                                     "PYTHON CODE CRASHED. Check the browser console (F12) for the full traceback in red text!" : 
+                                     "PYTHON CODE CRASHED. Check console (F12) for traceback!" : 
                                      "Loading Failed: " + error.message;
                 
                 updateStatus(errorMessage, 100);
