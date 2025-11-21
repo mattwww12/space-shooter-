@@ -31,7 +31,7 @@
     <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
         <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
         <!-- Confirmed Fix: This version tag helps us confirm the latest code is running. -->
-        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v13)</span></div>
+        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v14)</span></div>
         
         <!-- Loading Bar -->
         <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
@@ -48,7 +48,8 @@
     </div>
 
     <!-- Step 1: Load the Pyodide library -->
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    <!-- UPGRADED PYODIDE VERSION TO v0.25.1 -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
 
     <!-- Step 2: Run our application logic -->
     <script>
@@ -82,24 +83,19 @@
                     }
                 });
 
-                console.log("Pyodide loaded. Installing micropip...");
-                updateStatus("Loading package installer (micropip) and Pygame dependencies...", 85);
+                console.log("Pyodide loaded. Installing Pygame...");
+                updateStatus("Loading Pygame package...", 85);
 
-                await pyodide.loadPackage("micropip");
-                
-                // --- THE SIMPLIFIED MICROPIP FIX (v13) ---
-                // Removed explicit dependencies, letting micropip handle everything.
-                await pyodide.runPythonAsync(
-                    "import micropip\n" +
-                    "await micropip.install('pygame-ce')" // This should now resolve all necessary files.
-                );
+                // --- THE PYODIDE UPGRADE FIX (v14) ---
+                // Using the simple loadPackage with the new Pyodide version.
+                await pyodide.loadPackage("pygame");
                 // ------------------------------------------
 
-                console.log("Pygame installed. Fetching your game code: " + GAME_FILE_NAME);
+                console.log("Pygame installed successfully! Fetching your game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
                 // Aggressive cache-bust version
-                const response = await fetch(GAME_FILE_NAME + "?v=13"); 
+                const response = await fetch(GAME_FILE_NAME + "?v=14"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
