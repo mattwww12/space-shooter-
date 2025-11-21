@@ -46,14 +46,19 @@
         <!-- Canvas will be dynamically created by Pyodide -->
     </div>
 
+    <!-- 
+      *** CRITICAL FIX ***
+      We are now using TWO script tags.
+      1. The first one loads the Pyodide library and makes the 'loadPyodide' function globally available.
+      2. The second one runs our logic, but NOT as a 'module'.
+    -->
 
-    <!-- Pyodide Loader Script -->
-    <!-- *** CRITICAL FIX: Corrected typo 'type(="module")' to 'type="module"' *** -->
-    <script type="module">
-        // Using v0.25.0
-        import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
+    <!-- Step 1: Load the Pyodide library -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
 
-        console.log("JavaScript module loaded successfully.");
+    <!-- Step 2: Run our application logic -->
+    <script>
+        console.log("Main script tag running.");
 
         const loadingScreen = document.getElementById('loading-screen');
         const loadingMessage = document.getElementById('loading-message');
@@ -65,17 +70,20 @@
 
         function updateStatus(message, progress) {
             loadingMessage.textContent = message;
-            progressBar.style.width = String(progress) + "%"; // Use simple string concat
+            progressBar.style.width = String(progress) + "%";
             if (progress < 90) {
                 debugInfo.classList.remove('hidden');
             }
         }
         
+        // This function is now async
         async function initializePyodide() {
             try {
-                console.log("Initializing Pyodide...");
+                console.log("Initializing Pyodide (using global method)...");
                 updateStatus("Downloading core Python environment...", 10);
                 
+                // CRITICAL CHANGE: We no longer 'import'. We just call 'loadPyodide'
+                // because the script tag above made it available.
                 const pyodide = await loadPyodide({
                     onProgress: ({ totalBytes, loadedBytes }) => {
                         const progress = Math.min(90, 10 + Math.floor((loadedBytes / totalBytes) * 80));
@@ -94,8 +102,8 @@
                 console.log("Pygame installed. Fetching game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
-                // --- CACHE BUSTING: Incremented to v=3 ---
-                const response = await fetch(GAME_FILE_NAME + "?v=3"); 
+                // Use a cache-busting query
+                const response = await fetch(GAME_FILE_NAME + "?v=4"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
@@ -129,6 +137,7 @@
             }
         }
 
+        // Call the main function to start everything
         initializePyodide();
 
     </script>
