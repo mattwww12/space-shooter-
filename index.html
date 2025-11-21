@@ -49,8 +49,8 @@
 
     <!-- Pyodide Loader Script -->
     <script type="module">
-        // Switched to v0.24.1 for better stability with complex packages
-        import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js";
+        // --- FIX: Switched back to v0.25.0 to resolve the 'loadPyodide' export error ---
+        import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
 
         const loadingScreen = document.getElementById('loading-screen');
         const loadingMessage = document.getElementById('loading-message');
@@ -63,7 +63,6 @@
         function updateStatus(message, progress) {
             loadingMessage.textContent = message;
             progressBar.style.width = `${progress}%`;
-            // Show debug hint if initialization takes too long
             if (progress < 90) {
                 debugInfo.classList.remove('hidden');
             }
@@ -85,7 +84,6 @@
                 // --- Step 2: Install Pygame-ce ---
                 await pyodide.runPythonAsync(`
                     import micropip
-                    # Use Pyodide's built-in package manager to install pygame-ce
                     await micropip.install("pygame-ce")
                 `);
 
@@ -94,7 +92,7 @@
                 // --- Step 3: Fetch the main game file (main.py) ---
                 const response = await fetch(GAME_FILE_NAME);
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch ${GAME_FILE_NAME}. Status: ${response.status}`);
+                    throw new Error(\`Failed to fetch ${GAME_FILE_NAME}. Status: ${response.status}\`);
                 }
                 const pythonCode = await response.text();
                 
@@ -117,7 +115,6 @@
             } catch (error) {
                 console.error("Pyodide or Pygame execution failed:", error);
                 
-                // Custom message if the issue is likely a Python error
                 const errorMessage = error.name === 'PythonError' ? 
                                      `PYTHON CODE CRASHED. Check the browser console (F12) for the full traceback in red text!` : 
                                      `Loading Failed: ${error.message}.`;
