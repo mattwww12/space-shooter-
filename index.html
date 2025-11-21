@@ -76,7 +76,7 @@
                 
                 const pyodide = await loadPyodide({
                     onProgress: ({ totalBytes, loadedBytes }) => {
-                        const progress = Math.min(80, 10 + Math.floor((loadedBytes / totalBytes) * 70)); // Capped at 80
+                        const progress = Math.min(80, 10 + Math.floor((loadedBytes / totalBytes) * 70));
                         updateStatus("Downloading modules... (" + (loadedBytes / 1024 / 1024).toFixed(1) + "MB)", progress);
                     }
                 });
@@ -84,24 +84,23 @@
                 console.log("Pyodide loaded. Installing micropip...");
                 updateStatus("Loading package installer (micropip)...", 85);
 
-                // --- THIS IS THE FIX ---
-                // We must explicitly load 'micropip' before we can use it.
+                // Load micropip (needed for 'packaging' dependency)
                 await pyodide.loadPackage("micropip");
-                // ---------------------
 
                 console.log("Micropip loaded. Installing Pygame-ce...");
                 updateStatus("Installing Pygame dependencies (pygame-ce)...", 90);
                 
-                await pyodide.runPythonAsync(
-                    "import micropip\n" +
-                    "await micropip.install('pygame-ce')"
-                );
+                // --- THIS IS THE FIX ---
+                // We must use 'loadPackage' for complex, pre-compiled wheels like pygame-ce.
+                // We no longer use micropip.install() for this.
+                await pyodide.loadPackage("pygame-ce");
+                // ---------------------
 
                 console.log("Pygame installed. Fetching your game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
-                // --- CACHE BUST: Changed to v=6 to force a refresh ---
-                const response = await fetch(GAME_FILE_NAME + "?v=6"); 
+                // Use a cache-busting query
+                const response = await fetch(GAME_FILE_NAME + "?v=7"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
