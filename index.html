@@ -62,9 +62,9 @@
         const GAME_FILE_NAME = "main.py";
 
         // --- THIS IS THE FIX ---
-        // This is the direct URL to the pre-compiled Pygame (pygame-ce) wheel
-        // that works with Pyodide's Python 3.11 environment.
-        const PYGAME_CE_WHEEL_URL = "https://files.pythonhosted.org/packages/f0/a6/f6d71b87a1d35a3f5f5f51308316c4f74a11f358f2f4a5f0dc4f6a9c37fb/pygame_ce-2.5.0-cp311-cp311-emscripten_3_1_32_wasm32.whl";
+        // This is the Pygame (pygame-ce) wheel built with emscripten_3_1_46,
+        // which matches Pyodide v0.25.0.
+        const PYGAME_CE_WHEEL_URL = "https://files.pythonhosted.org/packages/f7/33/c869e3a6c0b368633b8433c6d1f03f7a836a877520e5c85310e5c93d937a/pygame_ce-2.5.1-cp311-cp311-emscripten_3_1_46_wasm32.whl";
         // ---------------------
 
         function updateStatus(message, progress) {
@@ -95,18 +95,17 @@
                 console.log("Micropip loaded. Installing Pygame-ce from direct URL...");
                 updateStatus("Installing Pygame dependencies (pygame-ce)...", 90);
                 
-                // --- THIS IS THE FIX (Part 2) ---
-                // We run a Python command to tell micropip to install the *exact file* from the URL.
+                // We run a Python command to tell micropip to install the *exact file* from the new URL.
                 await pyodide.runPythonAsync(
                     "import micropip\n" +
                     "await micropip.install('" + PYGAME_CE_WHEEL_URL + "')"
                 );
-                // ------------------------------
 
                 console.log("Pygame installed. Fetching your game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
-                const response = await fetch(GAME_FILE_NAME + "?v=8"); 
+                // Bumped cache-bust version
+                const response = await fetch(GAME_FILE_NAME + "?v=9"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
@@ -119,7 +118,8 @@
 
                 updateStatus("Running game...", 100);
                 
-                const moduleName = GAME_FILE_NAME.slice(0, -3); 
+                const moduleName = GAME_FILE_NAME.slice(0,
+                    -3); 
                 console.log("Importing Python module: " + moduleName);
                 
                 await pyodide.runPythonAsync("import " + moduleName);
