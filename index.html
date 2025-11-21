@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Shooter Prototype (WebAssembly)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS to ensure the game container is centered and takes up the viewport */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling when game is loaded */
+            background-color: #0d1117; /* Dark background matching GitHub theme */
+        }
+        .container {
+            min-height: 100vh;
+        }
+        /* Pygame often creates a canvas named 'game_canvas' or uses the main body */
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 2px solid #00c0c0; /* Cyan border */
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 192, 192, 0.5);
+            /* Important for responsiveness: scale the canvas if needed */
+            max-width: 100vw; 
+            max-height: 100vh;
+        }
+    </style>
+</head>
+<body class="text-white font-sans">
+    <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
+        <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
+        <div class="text-xl mb-6">Powered by Python and Pyodide</div>
+        
+        <!-- Loading Bar -->
+        <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
+            <div id="progress-bar" class="h-full bg-green-500 transition-all duration-300" style="width: 0%;"></div>
+        </div>
+        <div id="loading-message" class="mt-4 text-gray-400">Initializing environment...</div>
+        
+        <p class="mt-8 text-sm text-gray-500">Note: This may take a moment as the Python environment loads (~5-10MB).</p>
+    </div>
+
+    <!-- The Pygame canvas will render here or dynamically replace this loading screen -->
+    <div id="game-container" class="hidden">
+        <!-- Canvas will be dynamically created by Pyodide -->
+    </div>
+
+
+    <!-- Pyodide Loader Script -->
+    <script type="module">
+        import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
+
+        const loadingScreen = document.getElementById('loading-screen');
+        const loadingMessage = document.getElementById('loading-message');
+        const progressBar = document.getElementById('progress-bar');
+        const gameContainer = document.getElementById('game-container');
+
+        // Function to update the loading UI
+        function updateStatus(message, progress) {
+            loadingMessage.textContent = message;
+            progressBar.style.width = `${progress}%`;
+        }
+        
+        // --- Step 1: Initialize Pyodide ---
+        async function initializePyodide() {
+            try {
+                updateStatus("Downloading core Python environment...", 10);
+                
+                const pyodide = await loadPyodide({
+                    // Show progress during fetch
+                    onProgress: ({ totalBytes, loadedBytes }) => {
+                        const progress = Math.min(90, 10 + Math.floor((loadedBytes / totalBytes) * 80));
+                        updateStatus(`Downloading modules... (${(loadedBytes / 1024 / 1024).toFixed(1)}MB)`, progress);
+                    }
+                });
+
+                updateStatus("Installing Pygame dependencies (pygame-ce)...", 90);
+                
+                // --- Step 2: Install Pygame-ce (The necessary package for Pygame on Pyodide) ---
+                await pyodide.runPythonAsync(`
+                    import micropip
+                    # Ensure micropip is available and install the required library
+                    await micropip.install("pygame-ce")
+                `);
+
+                updateStatus("Fetching your game code...", 95);
+                
+                // --- Step 3: Fetch the main game file (main.py) ---
+                const response = await fetch("main.py");
+                if (!response.ok) {
+                    throw new Error(\`Failed to fetch main.py: \${response.statusText}\`);
+                }
+                const pythonCode = await response.text();
+                
+                // Inject the code into the Pyodide file system
+                pyodide.FS.writeFile("main.py", pythonCode, { encoding: "utf8" });
+
+                updateStatus("Running game...", 100);
+
+                // --- Step 4: Run the Python Code ---
+                await pyodide.runPythonAsync(`
+                    # This file is now written to the virtual file system
+                    import main 
+                `);
+
+                // --- Step 5: Clean up the loading screen ---
+                loadingScreen.remove();
+                gameContainer.classList.remove('hidden');
+
+
+            } catch (error) {
+                console.error("Pyodide or Pygame execution failed:", error);
+                updateStatus(`Error: ${error.message}. Check console for details.`, 100);
+                loadingMessage.classList.add('text-red-500');
+            }
+        }
+
+        initializePyodide();
+
+    </script>
+</body>
+</html>
