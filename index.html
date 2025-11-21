@@ -46,13 +46,6 @@
         <!-- Canvas will be dynamically created by Pyodide -->
     </div>
 
-    <!-- 
-      *** CRITICAL FIX ***
-      We are now using TWO script tags.
-      1. The first one loads the Pyodide library and makes the 'loadPyodide' function globally available.
-      2. The second one runs our logic, but NOT as a 'module'.
-    -->
-
     <!-- Step 1: Load the Pyodide library -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
 
@@ -76,22 +69,27 @@
             }
         }
         
-        // This function is now async
         async function initializePyodide() {
             try {
                 console.log("Initializing Pyodide (using global method)...");
                 updateStatus("Downloading core Python environment...", 10);
                 
-                // CRITICAL CHANGE: We no longer 'import'. We just call 'loadPyodide'
-                // because the script tag above made it available.
                 const pyodide = await loadPyodide({
                     onProgress: ({ totalBytes, loadedBytes }) => {
-                        const progress = Math.min(90, 10 + Math.floor((loadedBytes / totalBytes) * 80));
+                        const progress = Math.min(80, 10 + Math.floor((loadedBytes / totalBytes) * 70)); // Capped at 80
                         updateStatus("Downloading modules... (" + (loadedBytes / 1024 / 1024).toFixed(1) + "MB)", progress);
                     }
                 });
 
-                console.log("Pyodide loaded. Installing packages...");
+                console.log("Pyodide loaded. Installing micropip...");
+                updateStatus("Loading package installer (micropip)...", 85);
+
+                // --- THIS IS THE FIX ---
+                // We must explicitly load 'micropip' before we can use it.
+                await pyodide.loadPackage("micropip");
+                // ---------------------
+
+                console.log("Micropip loaded. Installing Pygame-ce...");
                 updateStatus("Installing Pygame dependencies (pygame-ce)...", 90);
                 
                 await pyodide.runPythonAsync(
@@ -103,7 +101,7 @@
                 updateStatus("Fetching your game code...", 95);
                 
                 // Use a cache-busting query
-                const response = await fetch(GAME_FILE_NAME + "?v=4"); 
+                const response = await fetch(GAME_FILE_NAME + "?v=5"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
