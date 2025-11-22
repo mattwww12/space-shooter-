@@ -31,7 +31,7 @@
     <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
         <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
         <!-- Confirmed Fix: This version tag helps us confirm the latest code is running. -->
-        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v17)</span></div>
+        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v18)</span></div>
         
         <!-- Loading Bar -->
         <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
@@ -76,11 +76,10 @@
                 console.log("Initializing Pyodide (using global method)...");
                 updateStatus("Downloading core Python environment...", 10);
                 
-                // --- THE OFFICIAL REPO FIX (v17) ---
-                // We point the indexURL directly to the v0.25.1 package repository
-                // to ensure the compatible Pygame file is found.
+                // --- THE FINAL PATH FIX (v18) ---
+                // Correct path is to the 'full' directory, not 'full/repo/'
                 const pyodide = await loadPyodide({
-                    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/repo/",
+                    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/",
                     onProgress: ({ totalBytes, loadedBytes }) => {
                         const progress = Math.min(80, 10 + Math.floor((loadedBytes / totalBytes) * 70));
                         updateStatus("Downloading modules... (" + (loadedBytes / 1024 / 1024).toFixed(1) + "MB)", progress);
@@ -98,7 +97,7 @@
                 updateStatus("Fetching your game code...", 95);
                 
                 // Aggressive cache-bust version
-                const response = await fetch(GAME_FILE_NAME + "?v=17"); 
+                const response = await fetch(GAME_FILE_NAME + "?v=18"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
