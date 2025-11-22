@@ -93,7 +93,7 @@ score_level = 0
 perfect_round_streak = 0
 
 
-# Streak variables (Unchanged)
+# Streak variables 
 hit_streak = 0
 score_multiplier = 1.0
 max_hit_streak_achieved = 0
