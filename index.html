@@ -31,7 +31,7 @@
     <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
         <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
         <!-- Confirmed Fix: This version tag helps us confirm the latest code is running. -->
-        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v25)</span></div>
+        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v26 - Downgraded Pyodide to v0.25.0)</span></div>
         
         <!-- Loading Bar -->
         <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
@@ -47,9 +47,8 @@
         <!-- Canvas will be dynamically created by Pyodide -->
     </div>
 
-    <!-- Step 1: Load the Pyodide library -->
-    <!-- Using stable Pyodide version v0.25.1 -->
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+    <!-- Step 1: Load the Pyodide library (UPDATED to v0.25.0) -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
 
     <!-- Step 2: Run our application logic -->
     <script>
@@ -62,9 +61,10 @@
         const debugInfo = document.getElementById('debug-info');
         
         const GAME_FILE_NAME = "main.py";
-        const PYODIDE_INDEX_URL = "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/";
+        // UPDATED Index URL to v0.25.0
+        const PYODIDE_INDEX_URL = "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/";
         
-        // This is the direct URL to the Pygame-ce wheel file for Pyodide v0.25.1
+        // The direct URL to the Pygame-ce wheel file, now matching the v0.25.0 base
         const PYGAME_WHEEL_URL = PYODIDE_INDEX_URL + "packages/pygame-ce/pygame_ce-2.4.2-cp311-cp311-emscripten_3_1_45_wasm32.whl";
 
 
@@ -96,8 +96,9 @@
                 // Load micropip first
                 await pyodide.loadPackage("micropip"); 
                 
-                // --- THE DIRECT WHEEL INSTALL FIX (v25) ---
+                // --- THE DIRECT WHEEL INSTALL (v26) ---
                 console.log("Attempting direct install from: " + PYGAME_WHEEL_URL);
+                // The main change is running this against the v0.25.0 base environment
                 await pyodide.runPythonAsync(`
                     import micropip
                     # Install Pygame directly using the wheel file URL
@@ -109,7 +110,7 @@
                 updateStatus("Fetching your game code...", 95);
                 
                 // Aggressive cache-bust version
-                const response = await fetch(GAME_FILE_NAME + "?v=25"); 
+                const response = await fetch(GAME_FILE_NAME + "?v=26"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
