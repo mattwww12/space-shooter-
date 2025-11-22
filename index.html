@@ -31,7 +31,7 @@
     <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
         <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
         <!-- Confirmed Fix: This version tag helps us confirm the latest code is running. -->
-        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v22)</span></div>
+        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v23)</span></div>
         
         <!-- Loading Bar -->
         <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
@@ -86,25 +86,20 @@
                     }
                 });
 
-                console.log("Pyodide loaded. Installing micropip and Pygame-ce from the Pyodide index...");
+                console.log("Pyodide loaded. Installing Pygame using native loader...");
                 updateStatus("Installing Pygame dependencies...", 85);
                 
-                await pyodide.loadPackage("micropip"); // Load the installer utility
-
-                // --- THE MICROPIP INDEX URL FIX (v22) ---
-                // We explicitly set the Pyodide repo as the only source for micropip
-                await pyodide.runPythonAsync(
-                    "import micropip\n" +
-                    // Using 'pygame-ce' which is the common name, and force the Pyodide index.
-                    `await micropip.install('pygame-ce', index_urls=['${PYODIDE_INDEX_URL}'])\n` 
-                );
+                // --- THE NATIVE LOADER FIX (v23) ---
+                // Reverting to the native loader, hoping the name 'pygame-ce' is now recognized
+                // since the indexURL is correct.
+                await pyodide.loadPackage("pygame-ce");
                 // ------------------------------------
 
                 console.log("Pygame installed successfully! Fetching your game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
                 // Aggressive cache-bust version
-                const response = await fetch(GAME_FILE_NAME + "?v=22"); 
+                const response = await fetch(GAME_FILE_NAME + "?v=23"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
