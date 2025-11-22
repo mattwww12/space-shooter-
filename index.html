@@ -31,7 +31,7 @@
     <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
         <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
         <!-- Confirmed Fix: This version tag helps us confirm the latest code is running. -->
-        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v32 - Rollback to Pyodide v0.23.4 for stable Pygame install)</span></div>
+        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v33 - Back to v0.25.1, using micropip to install 'pygame-ce')</span></div>
         
         <!-- Loading Bar -->
         <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
@@ -47,8 +47,8 @@
         <!-- Canvas will be dynamically created by Pyodide -->
     </div>
 
-    <!-- Step 1: Load the Pyodide library (v0.23.4 - Python 3.10) -->
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <!-- Step 1: Load the Pyodide library (v0.25.1 - Python 3.11) -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
 
     <!-- Step 2: Run our application logic -->
     <script>
@@ -61,11 +61,10 @@
         const debugInfo = document.getElementById('debug-info');
         
         const GAME_FILE_NAME = "main.py";
-        // Index URL is now v0.23.4
-        const PYODIDE_INDEX_URL = "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/";
+        // Index URL is back to v0.25.1
+        const PYODIDE_INDEX_URL = "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/";
         
-        // Using the standard package name for the stable index
-        const PYGAME_PACKAGE_NAME = "pygame";
+        const PYGAME_PACKAGE_NAME = "pygame-ce"; // Use the PyPI name
 
 
         function updateStatus(message, progress) {
@@ -90,27 +89,27 @@
                     }
                 });
 
-                console.log("Pyodide loaded. Installing Pygame from the official index...");
+                console.log("Pyodide loaded. Installing micropip and Pygame...");
                 updateStatus("Installing Pygame dependencies...", 85);
                 
-                // --- NATIVE LOAD PACKAGE (v32) ---
-                console.log("Attempting native install of: " + PYGAME_PACKAGE_NAME);
+                // Load micropip first
+                await pyodide.loadPackage("micropip"); 
                 
-                // Use loadPackage with the stable Pyodide version
-                await pyodide.loadPackage(PYGAME_PACKAGE_NAME, {
-                    onProgress: ({ totalBytes, loadedBytes }) => {
-                        // This updates the bar during package installation
-                        const progress = Math.min(95, 85 + Math.floor((loadedBytes / totalBytes) * 10));
-                        updateStatus("Installing Pygame package...", progress);
-                    }
-                });
+                // --- MICROPIP INSTALL (v33) ---
+                // Tell micropip to install pygame-ce, relying on Pyodide to find the pre-compiled wheel.
+                console.log("Attempting micropip install of: " + PYGAME_PACKAGE_NAME);
+                
+                await pyodide.runPythonAsync(`
+                    import micropip
+                    await micropip.install('${PYGAME_PACKAGE_NAME}')
+                `);
                 // ------------------------------------
 
                 console.log("Pygame installed successfully! Fetching your game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
                 // Aggressive cache-bust version
-                const response = await fetch(GAME_FILE_NAME + "?v=32"); 
+                const response = await fetch(GAME_FILE_NAME + "?v=33"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
