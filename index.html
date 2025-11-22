@@ -31,7 +31,7 @@
     <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
         <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
         <!-- Confirmed Fix: This version tag helps us confirm the latest code is running. -->
-        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v18)</span></div>
+        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v19)</span></div>
         
         <!-- Loading Bar -->
         <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
@@ -76,8 +76,7 @@
                 console.log("Initializing Pyodide (using global method)...");
                 updateStatus("Downloading core Python environment...", 10);
                 
-                // --- THE FINAL PATH FIX (v18) ---
-                // Correct path is to the 'full' directory, not 'full/repo/'
+                // Correct path is to the 'full' directory
                 const pyodide = await loadPyodide({
                     indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/",
                     onProgress: ({ totalBytes, loadedBytes }) => {
@@ -85,19 +84,26 @@
                         updateStatus("Downloading modules... (" + (loadedBytes / 1024 / 1024).toFixed(1) + "MB)", progress);
                     }
                 });
+
+                console.log("Pyodide loaded. Installing micropip and Pygame-ce...");
+                updateStatus("Installing Pygame dependencies...", 85);
+                
+                await pyodide.loadPackage("micropip");
+                
+                // --- THE MICROPIP + PATH FIX (v19) ---
+                // This combines the correct Pyodide path with the reliable micropip installer
+                // for the correct package name.
+                await pyodide.runPythonAsync(
+                    "import micropip\n" +
+                    "await micropip.install('pygame-ce')"
+                );
                 // ------------------------------------
 
-                console.log("Pyodide loaded. Installing official Pygame package...");
-                updateStatus("Installing Pygame dependencies...", 85);
-
-                // Use the official, simplified loadPackage call now that the index URL is correct.
-                await pyodide.loadPackage("pygame");
-                
                 console.log("Pygame installed successfully! Fetching your game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
                 // Aggressive cache-bust version
-                const response = await fetch(GAME_FILE_NAME + "?v=18"); 
+                const response = await fetch(GAME_FILE_NAME + "?v=19"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
