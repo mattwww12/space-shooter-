@@ -3,56 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pyodide Environment Check</title>
+    <title>Python in Browser</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FIX: Switching back to the latest stable version (0.25.1) to resolve persistent CDN fetching errors, hoping the network issue has cleared. -->
-    <script src="https://cdn.jsdelivr.net/npm/pyodide@0.25.1/pyodide.js"></script> 
+    <!-- Switching to the official Pyodide CDN for stability -->
+    <script src="https://cdn.pyodide.org/pyodide-build/v0.24.0/full/pyodide.js"></script> 
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-900 min-h-screen flex items-center justify-center p-4">
 
-    <div id="app-container" class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Python Code Execution (Pyodide)</h1>
+    <div id="app-container" class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-xl text-white border-4 border-indigo-500/50">
         
-        <div id="loading-message" class="text-center text-lg text-indigo-600 font-medium">
-            <div class="animate-spin inline-block w-6 h-6 border-[3px] border-current border-t-transparent text-indigo-500 rounded-full" role="status">
-                <span class="sr-only">Loading...</span>
+        <h1 class="text-3xl font-extrabold text-indigo-400 mb-6 text-center">
+            <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-sky-400">Python Sandbox</span>
+        </h1>
+        
+        <!-- Loading State -->
+        <div id="loading-message" class="text-center transition-opacity duration-500">
+            <div class="animate-pulse flex flex-col items-center">
+                <svg class="w-10 h-10 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7 7l7-7-7-7" />
+                </svg>
+                <p class="mt-4 text-xl font-medium text-indigo-300">Initializing Pyodide...</p>
+                <p class="text-sm text-gray-400 mt-2">Loading core Python environment and dependencies.</p>
             </div>
-            Loading Python environment (Pyodide)...
         </div>
 
-        <div id="output-container" class="hidden">
-            <p class="text-gray-600 mb-4">
-                The Python environment is ready. We successfully ran a <code class="bg-gray-200 p-1 rounded">numpy</code> calculation.
+        <!-- Output State -->
+        <div id="output-container" class="hidden transition-opacity duration-500">
+            <p class="text-green-400 font-semibold mb-4 text-center">
+                ✅ Environment Ready! Numpy calculation successful.
             </p>
             
-            <div class="bg-gray-800 p-4 rounded-lg text-white font-mono text-sm overflow-x-auto">
-                <p class="text-green-400 mb-2">// Python Code Executed:</p>
-                <pre id="code-display" class="whitespace-pre-wrap"></pre>
+            <div class="bg-gray-700 p-4 rounded-xl border border-gray-600">
+                <h2 class="text-lg font-bold text-gray-200 mb-2">Python Output:</h2>
+                <pre id="python-output" class="text-sm font-mono whitespace-pre-wrap bg-gray-900 p-3 rounded text-yellow-400 overflow-x-auto"></pre>
             </div>
             
-            <h2 class="text-xl font-semibold text-gray-800 mt-6 mb-3 border-b pb-2">Result:</h2>
-            <div class="bg-indigo-50 p-4 rounded-lg border-l-4 border-indigo-500 text-indigo-800">
-                <pre id="python-output" class="text-lg font-mono whitespace-pre-wrap"></pre>
-            </div>
-            
-            <p class="mt-6 text-sm text-gray-500">
-                **Note:** The previous error was due to the unsupported <code class="bg-gray-200 p-1 rounded">pygame</code> package. For browser games, consider using JavaScript with Canvas/Three.js.
+            <p class="mt-6 text-xs text-gray-400 text-center">
+                <code class="text-indigo-400">numpy</code> was used to run a fast array calculation.
             </p>
         </div>
     </div>
 
     <script>
-        // loadPyodide is now available globally
-
         const loadingMessage = document.getElementById('loading-message');
         const outputContainer = document.getElementById('output-container');
         const pythonOutput = document.getElementById('python-output');
-        const codeDisplay = document.getElementById('code-display');
 
-        // This Python code uses io and sys to capture the print output into a string that runPython returns.
+        // Python code to run, which uses numpy and captures print output
         const pythonCodeWithReturn = `
 import numpy as np
 import time
@@ -63,61 +63,65 @@ import sys
 buffer = io.StringIO()
 sys.stdout = buffer
 
-# --- Original Code ---
+# --- NumPy Calculation ---
 arr = np.arange(100000)
 start_time = time.time()
 result_array = np.sqrt(arr) * np.sin(arr / 100)
 end_time = time.time()
 mean_value = np.mean(result_array)
 execution_time = end_time - start_time
-print(f"Mean Value of Complex Array: {mean_value:.4f}")
-print(f"Time Taken (s): {execution_time:.4f}")
-print("\\n--- Array Head (First 5 values) ---")
-print(result_array[:5])
-# --- End Original Code ---
+print(f"Mean Value: {mean_value:.4f}")
+print(f"Time: {execution_time:.4f} seconds")
+print(f"NumPy Version: {np.__version__}")
+# --- End Calculation ---
 
-# Restore stdout and return captured output
+# Restore original stdout and return captured output
 sys.stdout = sys.__stdout__
-buffer.getvalue() # This is the string returned by runPython
+buffer.getvalue()
         `;
         
         async function initializePyodide() {
-            // Ensure loadPyodide is available globally before attempting to call it.
             if (typeof loadPyodide === 'undefined') {
-                loadingMessage.textContent = "Error: Pyodide library failed to load globally. Check network connection or CDN status.";
-                outputContainer.classList.remove('hidden');
+                displayError("Pyodide library failed to load globally. Check the external script tag or network connection.");
                 return;
             }
 
+            function displayError(message) {
+                loadingMessage.classList.add('hidden');
+                outputContainer.classList.remove('hidden');
+                pythonOutput.textContent = message;
+                outputContainer.innerHTML = `
+                    <div class="bg-red-900/50 p-4 rounded-xl border-l-4 border-red-500 text-red-300">
+                        <h2 class="text-xl font-bold">Initialization Error (v0.24.0)</h2>
+                        <pre class="whitespace-pre-wrap mt-2">${message}</pre>
+                        <p class="text-sm mt-3 text-red-400">This is often due to temporary network issues fetching core files. We switched the CDN to try and fix this.</p>
+                    </div>`;
+            }
+
             try {
-                // Initialize Pyodide (now accessed globally)
-                // FIX: Updated indexURL to 0.25.1 to match the script tag.
+                // Initialize Pyodide using the official Pyodide CDN for stability
                 let pyodide = await loadPyodide({
-                    indexURL: "https://cdn.jsdelivr.net/npm/pyodide@0.25.1/full/"
+                    indexURL: "https://cdn.pyodide.org/pyodide-build/v0.24.0/full/"
                 });
 
-                loadingMessage.textContent = "Installing dependencies (numpy)...";
+                // Update loading status
+                document.querySelector('#loading-message p:last-child').textContent = "Installing dependencies (numpy)...";
                 await pyodide.loadPackage("numpy");
 
-                loadingMessage.textContent = "Running Python code...";
+                // Update loading status
+                document.querySelector('#loading-message p:last-child').textContent = "Running Python code...";
                 
-                // Display the code that is about to run
-                codeDisplay.textContent = pythonCodeWithReturn.trim();
-
                 // Run the Python code and capture the output
                 const outputString = pyodide.runPython(pythonCodeWithReturn);
                 pythonOutput.textContent = outputString;
 
-
+                // Hide loading, show output
                 loadingMessage.classList.add('hidden');
                 outputContainer.classList.remove('hidden');
 
             } catch (error) {
-                loadingMessage.classList.add('hidden');
-                pythonOutput.textContent = `Failed to initialize Pyodide or execute code: ${error.message}`;
-                outputContainer.classList.remove('hidden');
-                outputContainer.innerHTML = '<div class="bg-red-100 p-4 rounded-lg border-l-4 border-red-500 text-red-800"><h2 class="text-xl font-bold">Error</h2><pre class="whitespace-pre-wrap">' + pythonOutput.textContent + '</pre></div>';
-                console.error("Pyodide execution failed:", error);
+                console.error("Pyodide initialization failed:", error);
+                displayError(`Error: ${error.message}`);
             }
         }
 
