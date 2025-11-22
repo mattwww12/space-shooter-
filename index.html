@@ -31,7 +31,7 @@
     <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
         <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
         <!-- Confirmed Fix: This version tag helps us confirm the latest code is running. -->
-        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v29 - URL fix: Removed _wasm32 suffix)</span></div>
+        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v30 - Switched to native loadPackage for guaranteed compatibility)</span></div>
         
         <!-- Loading Bar -->
         <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
@@ -64,9 +64,8 @@
         // Index URL is v0.25.1
         const PYODIDE_INDEX_URL = "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/";
         
-        // --- URL CORRECTION (v29) ---
-        // Removed the trailing '_wasm32' which was causing the 404 error.
-        const PYGAME_WHEEL_URL = PYODIDE_INDEX_URL + "packages/pygame-ce/pygame_ce-2.4.2-cp311-cp311-emscripten_3_1_46.whl";
+        // Removed explicit wheel URL. We rely on the Pyodide index now.
+        const PYGAME_PACKAGE_NAME = "pygame-ce";
 
 
         function updateStatus(message, progress) {
@@ -91,26 +90,28 @@
                     }
                 });
 
-                console.log("Pyodide loaded. Installing micropip and Pygame directly via wheel URL...");
+                console.log("Pyodide loaded. Installing Pygame from the official index...");
                 updateStatus("Installing Pygame dependencies...", 85);
                 
-                // Load micropip first
-                await pyodide.loadPackage("micropip"); 
+                // --- NATIVE LOAD PACKAGE (v30) ---
+                // This uses the official, compatible wheel from the Pyodide index.
+                console.log("Attempting native install of: " + PYGAME_PACKAGE_NAME);
                 
-                // --- THE DIRECT WHEEL INSTALL (v29) ---
-                console.log("Attempting direct install from: " + PYGAME_WHEEL_URL);
-                await pyodide.runPythonAsync(`
-                    import micropip
-                    # Install Pygame directly using the corrected wheel file URL
-                    await micropip.install('${PYGAME_WHEEL_URL}')
-                `);
+                // Use loadPackage directly, which bypasses the strict micropip ABI checks
+                await pyodide.loadPackage(PYGAME_PACKAGE_NAME, {
+                    onProgress: ({ totalBytes, loadedBytes }) => {
+                        // This updates the bar during package installation
+                        const progress = Math.min(95, 85 + Math.floor((loadedBytes / totalBytes) * 10));
+                        updateStatus("Installing Pygame package...", progress);
+                    }
+                });
                 // ------------------------------------
 
                 console.log("Pygame installed successfully! Fetching your game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
                 // Aggressive cache-bust version
-                const response = await fetch(GAME_FILE_NAME + "?v=29"); 
+                const response = await fetch(GAME_FILE_NAME + "?v=30"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
