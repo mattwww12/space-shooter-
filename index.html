@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pygame to Web Runner Concept - Separated Code</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styling for the console area */
+        #output {
+            height: 200px;
+            overflow-y: scroll;
+            background-color: #1e1e1e;
+            color: #00ff00;
+            font-family: 'Consolas', 'Courier New', monospace;
+            padding: 1rem;
+            border: 1px solid #333;
+            border-radius: 0.5rem;
+            white-space: pre-wrap;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-8 flex flex-col items-center">
+
+    <div class="max-w-3xl w-full">
+        <h1 class="text-4xl font-extrabold text-center mb-4 text-yellow-400">Pygame Web Conversion Concept</h1>
+        <p class="text-center text-gray-400 mb-8">
+            This demonstrates loading a separate Python file! The HTML is the launchpad, and the Python code is the rocket.
+        </p>
+
+        <div id="loading" class="text-center text-lg p-4 bg-blue-900 rounded-lg shadow-lg">
+            🐍 Initializing Python Environment (Pyodide)... Please wait.
+        </div>
+
+        <div id="app-container" class="hidden">
+            <h2 class="text-2xl font-semibold mb-3 text-cyan-400">Python Script Output:</h2>
+            <div id="output"></div>
+
+            <h2 class="text-2xl font-semibold mt-6 mb-3 text-cyan-400">The External Script Loaded:</h2>
+            <pre id="code-display" class="bg-gray-800 p-4 rounded-lg text-sm overflow-x-auto border border-gray-700"></pre>
+
+            <button id="run-button" onclick="runPythonCode()" class="mt-6 w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-xl transition duration-150 ease-in-out">
+                Re-Run External Script
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Set up the actual content of your "game.py" file here.
+        // In a real project, this would be loaded from a separate URL!
+        const GAME_PYTHON_CODE = `
+# This code is running from the simulated 'my_game_code.py' file!
+import sys
+
+def main_game_loop():
+    # This is where your Pygame setup and loop would normally go!
+    # For now, it just demonstrates loading a file and running a function.
+    
+    player_score = 0
+    game_level = 1
+    
+    print("---------------------------------")
+    print("Starting Game Logic from separate file...")
+    
+    # Simulate some action
+    for i in range(5):
+        player_score += (i * game_level)
+        print(f"Level {game_level} Progress: Score is now {player_score}")
+        
+    print("Game Over! Final Score: " + str(player_score))
+    print("---------------------------------")
+    
+# Always call the main function to start the script
+main_game_loop()
+`;
+
+        // The name of the file we are running
+        const FILE_TO_RUN = 'my_game_code.py';
+
+        // The instruction to run the script. This is the only code executed directly.
+        const RUNNER_CODE = 'import pyodide; await pyodide.run_until_complete(pyodide.code.run_script(FILE_TO_RUN))';
+
+        document.getElementById('code-display').textContent = GAME_PYTHON_CODE;
+        const outputElement = document.getElementById('output');
+        let pyodide = null; // Global Pyodide instance
+
+        function printToOutput(text) {
+            outputElement.textContent += text + '\\n';
+        }
+
+        async function initializePyodide() {
+            try {
+                // 1. Load Pyodide
+                pyodide = await loadPyodide({
+                    stdout: printToOutput,
+                    stderr: printToOutput,
+                });
+                
+                // 2. *** NEW STEP: CREATE THE EXTERNAL FILE IN THE BROWSER ***
+                // We use Pyodide's virtual file system (FS) to create the file
+                // as if it were loaded from your GitHub repository.
+                pyodide.FS.writeFile(FILE_TO_RUN, GAME_PYTHON_CODE, { encoding: 'utf8' });
+                
+                // 3. Hide loading, show app
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                
+                // 4. Run the code for the first time
+                runPythonCode();
+
+            } catch (error) {
+                printToOutput("ERROR during Pyodide initialization: " + error);
+                document.getElementById('loading').textContent = "Initialization Failed! Check console for errors.";
+            }
+        }
+
+        async function runPythonCode() {
+            if (!pyodide) {
+                printToOutput("Pyodide not initialized.");
+                return;
+            }
+            
+            outputElement.textContent = ''; // Clear previous output
+            printToOutput(`Running external file: ${FILE_TO_RUN}...`);
+            
+            try {
+                // Now we run the Python command that tells Pyodide to execute the file we just created.
+                await pyodide.runPythonAsync(RUNNER_CODE);
+                printToOutput("Execution finished successfully.");
+            } catch (error) {
+                printToOutput("PYTHON EXECUTION ERROR:");
+                printToOutput(error);
+            }
+        }
+
+        // Start the initialization process when the page loads
+        initializePyodide();
+    </script>
+
+</body>
+</html>
