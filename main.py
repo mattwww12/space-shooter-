@@ -129,90 +129,120 @@ hit_streak_data = []
 perfect_pilot_data = []
 
 
-# --- 3. PERSISTENCE & LEADERBOARD FUNCTIONS (UPDATED FOR DELETION) ---
+# --- 3. PERSISTENCE & LEADERBOARD FUNCTIONS (SIMULATED STORAGE FOR PYODIDE) ---
+# NOTE: File I/O is restricted in the web environment. This uses a global dictionary
+# to simulate persistence, ensuring the game logic runs without crashing.
 
+__SIMULATED_STORAGE = {
+    LEADERBOARD_FILE: [],
+    HIT_STREAK_FILE: [],
+    PERFECT_PILOT_FILE: [],
+    CONFIG_FILE: {'games_played': 0, 'sight_mode': False}
+}
+
+def _load_data(file_name):
+    """Internal helper to load data from simulated storage."""
+    # This structure works for both lists (leaderboards) and dicts (config)
+    return __SIMULATED_STORAGE.get(file_name, []) if file_name.endswith('.json') else __SIMULATED_STORAGE.get(file_name, {})
+
+def _save_data(file_name, data):
+    """Internal helper to save data to simulated storage."""
+    __SIMULATED_STORAGE[file_name] = data
 
 def delete_file_if_exists(file_name):
-   """Safely deletes a file if it exists."""
-   # NOTE: Pyodide/browser environment does not use the real file system (os.path/os.remove)
-   # This function should typically be replaced with a browser storage (like localStorage
-   # or IndexedDB) or a proper remote database (like Firestore) in a production web app.
-   # For now, we print a message assuming a local Python environment.
-   print(f"Attempting to delete {file_name}...")
-   # ... placeholder logic ...
+   """Safely 'deletes' data from simulated storage."""
+   if file_name in __SIMULATED_STORAGE:
+       if file_name == CONFIG_FILE:
+           __SIMULATED_STORAGE[file_name] = {'games_played': 0, 'sight_mode': False}
+       else:
+           __SIMULATED_STORAGE[file_name] = []
+   print(f"Simulated deletion of {file_name} completed.")
 
 
 def load_config():
    """Loads configuration data."""
    global games_played, sight_mode
-   # Placeholder logic for web environment:
-   # We will assume defaults as file system interaction is complex in Pyodide.
-   pass
+   config = _load_data(CONFIG_FILE)
+   games_played = config.get('games_played', 0)
+   sight_mode = config.get('sight_mode', False)
 
 
 def save_config():
    """Saves configuration data."""
-   # Placeholder logic for web environment:
-   pass
+   config = {'games_played': games_played, 'sight_mode': sight_mode}
+   _save_data(CONFIG_FILE, config)
 
 
 def load_leaderboard(file_name):
-   """Loads leaderboard from JSON file."""
-   # Placeholder logic for web environment:
-   return []
+   """Loads leaderboard from simulated storage."""
+   return _load_data(file_name)
 
 
 def save_leaderboard(file_name, data):
    """Saves the current leaderboard data."""
-   # Placeholder logic for web environment:
-   pass
+   _save_data(file_name, data)
 
 
 def initialize_leaderboards_and_config():
-   """Load all leaderboards and configuration at startup."""
-   global leaderboard_data, hit_streak_data, perfect_pilot_data
-  
-   load_config()
-  
-   leaderboard_data = load_leaderboard(LEADERBOARD_FILE)
-   hit_streak_data = load_leaderboard(HIT_STREAK_FILE)
-   perfect_pilot_data = load_leaderboard(PERFECT_PILOT_FILE)
-  
-   if leaderboard_data:
-       return leaderboard_data[0].get('score', 0)
-   return 0
+    """Load all leaderboards and configuration at startup."""
+    global leaderboard_data, hit_streak_data, perfect_pilot_data
+    
+    load_config()
+    
+    # Load from the global dictionary
+    leaderboard_data = load_leaderboard(LEADERBOARD_FILE)
+    hit_streak_data = load_leaderboard(HIT_STREAK_FILE)
+    perfect_pilot_data = load_leaderboard(PERFECT_PILOT_FILE)
+    
+    if leaderboard_data:
+        # Return the highest score found
+        return max(entry.get('score', 0) for entry in leaderboard_data)
+    return 0
 
 
 def update_leaderboards(name, final_score, max_h_streak, perfect_streak):
-   """Adds final game stats to all relevant leaderboards."""
-   global leaderboard_data, hit_streak_data, perfect_pilot_data
-   # Placeholder logic for web environment:
-   pass
+    """Adds final game stats to all relevant leaderboards."""
+    global leaderboard_data, hit_streak_data, perfect_pilot_data
+    
+    # High Score Board
+    leaderboard_data.append({'name': name, 'score': final_score})
+    leaderboard_data.sort(key=lambda x: x['score'], reverse=True)
+    leaderboard_data = leaderboard_data[:10]
+    _save_data(LEADERBOARD_FILE, leaderboard_data)
 
+    # Hit Streak Board
+    hit_streak_data.append({'name': name, 'streak': max_h_streak})
+    hit_streak_data.sort(key=lambda x: x['streak'], reverse=True)
+    hit_streak_data = hit_streak_data[:10]
+    _save_data(HIT_STREAK_FILE, hit_streak_data)
+
+    # Perfect Pilot Board
+    perfect_pilot_data.append({'name': name, 'streak': perfect_streak})
+    perfect_pilot_data.sort(key=lambda x: x['streak'], reverse=True)
+    perfect_pilot_data = perfect_pilot_data[:10]
+    _save_data(PERFECT_PILOT_FILE, perfect_pilot_data)
 
 def reset_all_history():
-   """
-   Resets all game history by deleting all persistent files,
-   clearing memory state, and reloading the configuration (which will now be defaults).
-   """
-   global leaderboard_data, hit_streak_data, perfect_pilot_data, games_played, sight_mode
-  
-   # 1. Permanently delete all files (using placeholder)
-   delete_file_if_exists(LEADERBOARD_FILE)
-   delete_file_if_exists(HIT_STREAK_FILE)
-   delete_file_if_exists(PERFECT_PILOT_FILE)
-   delete_file_if_exists(CONFIG_FILE)
+    """Resets all game history by clearing simulated storage and reloading."""
+    global leaderboard_data, hit_streak_data, perfect_pilot_data, games_played, sight_mode
+    
+    # 1. Permanently delete all data from simulated storage
+    delete_file_if_exists(LEADERBOARD_FILE)
+    delete_file_if_exists(HIT_STREAK_FILE)
+    delete_file_if_exists(PERFECT_PILOT_FILE)
+    delete_file_if_exists(CONFIG_FILE) # This resets config to defaults
+    
+    # 2. Clear in-memory data (will be reloaded by initialize)
+    leaderboard_data = []
+    hit_streak_data = []
+    perfect_pilot_data = []
+    games_played = 0
+    sight_mode = False
+    
+    print("ALL GAME HISTORY PERMANENTLY DELETED.")
+# ---------------------------------------------------------------------------------
 
 
-   # 2. Clear in-memory data
-   leaderboard_data = []
-   hit_streak_data = []
-   perfect_pilot_data = []
-   games_played = 0
-   sight_mode = False
-  
-   print("ALL GAME HISTORY PERMANENTLY DELETED.")
-  
 def draw_text(surf, text, size, x, y, color=WHITE, align="center"):
    """Helper function to display text on the designated surface."""
    if size >= 60:
@@ -439,10 +469,8 @@ class LuckyBlock(pygame.sprite.Sprite):
        self.rect.y += self.speedy
       
        # New: Check for max lifespan (60 seconds)
-       # We need to use 1000ms / FPS to get the millisecond duration per frame,
-       # but since we are using pygame.time.get_ticks() which returns milliseconds,
-       # the calculation should be simplified.
-       if (pygame.time.get_ticks() - self.spawn_time) > LUCKY_BLOCK_LIFESPAN * (1000 / 45): # Approximating the conversion
+       # We use 1000/FPS as approximation for milliseconds per frame
+       if (pygame.time.get_ticks() - self.spawn_time) > LUCKY_BLOCK_LIFESPAN * (1000 / 45): 
            self.kill()
 
 
@@ -656,8 +684,6 @@ def check_and_spawn_enemies():
        lucky_blocks.add(new_block)
        kills_to_next_lucky_block = 25 # Reset the counter for the next cycle
    # ---------------------------------------------------------
-
-
 
 
 def apply_powerup():
@@ -970,7 +996,7 @@ def show_dev_menu():
        # 2. Reset All History
        draw_text(GAME_SURFACE, "Press R to PERMANENTLY ERASE ALL HISTORY", 36, SCREEN_WIDTH // 2, 450, ORANGE)
        # --- UPDATED TEXT HERE ---
-       draw_text(GAME_SURFACE, "(Deletes all files: Leaderboards, Games Played, and Sight Mode)", 30, SCREEN_WIDTH // 2, 490, GRAY)
+       draw_text(GAME_SURFACE, "(Deletes all data: Leaderboards, Games Played, and Sight Mode)", 30, SCREEN_WIDTH // 2, 490, GRAY)
        # -------------------------
       
        if games_played == 0 and high_score == 0 and not sight_mode: # Added high_score check
@@ -1356,7 +1382,3 @@ while running:
 save_config()
 pygame.quit()
 sys.exit()
-
-start_game()
-
-

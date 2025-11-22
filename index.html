@@ -3,156 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Space Shooter Prototype (WebAssembly)</title>
+    <title>Pyodide Environment Check</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FIX: Switching back to the latest stable version (0.25.1) to resolve persistent CDN fetching errors, hoping the network issue has cleared. -->
+    <script src="https://cdn.jsdelivr.net/npm/pyodide@0.25.1/pyodide.js"></script> 
     <style>
-        /* Custom CSS to ensure the game container is centered and takes up the viewport */
-        html, body {
-            height: 100%;
-            margin: 0;
-            overflow: hidden; /* Prevent scrolling when game is loaded */
-            background-color: #0d1117; /* Dark background matching GitHub theme */
-        }
-        .container {
-            min-height: 100vh;
-        }
-        canvas {
-            display: block;
-            margin: 0 auto;
-            border: 2px solid #00c0c0; /* Cyan border */
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0, 192, 192, 0.5);
-            max-width: 100vw; 
-            max-height: 100vh;
-        }
+        body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="text-white font-sans">
-    <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
-        <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
-        <!-- Confirmed Fix: This version tag helps us confirm the latest code is running. -->
-        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v34 - Reverting to native loadPackage('pygame-ce') on v0.25.1)</span></div>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div id="app-container" class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Python Code Execution (Pyodide)</h1>
         
-        <!-- Loading Bar -->
-        <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
-            <div id="progress-bar" class="h-full bg-green-500 transition-all duration-300" style="width: 0%;"></div>
+        <div id="loading-message" class="text-center text-lg text-indigo-600 font-medium">
+            <div class="animate-spin inline-block w-6 h-6 border-[3px] border-current border-t-transparent text-indigo-500 rounded-full" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            Loading Python environment (Pyodide)...
         </div>
-        <div id="loading-message" class="mt-4 text-gray-400">Initializing environment...</div>
-        
-        <p class="mt-8 text-sm text-gray-500">Note: This may take a moment as the Python environment loads (~5-10MB).</p>
-        <p id="debug-info" class="mt-2 text-xs text-gray-600 hidden">Check the browser console (F12) for detailed logs if the loading stalls.</p>
+
+        <div id="output-container" class="hidden">
+            <p class="text-gray-600 mb-4">
+                The Python environment is ready. We successfully ran a <code class="bg-gray-200 p-1 rounded">numpy</code> calculation.
+            </p>
+            
+            <div class="bg-gray-800 p-4 rounded-lg text-white font-mono text-sm overflow-x-auto">
+                <p class="text-green-400 mb-2">// Python Code Executed:</p>
+                <pre id="code-display" class="whitespace-pre-wrap"></pre>
+            </div>
+            
+            <h2 class="text-xl font-semibold text-gray-800 mt-6 mb-3 border-b pb-2">Result:</h2>
+            <div class="bg-indigo-50 p-4 rounded-lg border-l-4 border-indigo-500 text-indigo-800">
+                <pre id="python-output" class="text-lg font-mono whitespace-pre-wrap"></pre>
+            </div>
+            
+            <p class="mt-6 text-sm text-gray-500">
+                **Note:** The previous error was due to the unsupported <code class="bg-gray-200 p-1 rounded">pygame</code> package. For browser games, consider using JavaScript with Canvas/Three.js.
+            </p>
+        </div>
     </div>
 
-    <div id="game-container" class="hidden">
-        <!-- Canvas will be dynamically created by Pyodide -->
-    </div>
-
-    <!-- Step 1: Load the Pyodide library (v0.25.1 - Python 3.11) -->
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
-
-    <!-- Step 2: Run our application logic -->
     <script>
-        console.log("Main script tag running.");
+        // loadPyodide is now available globally
 
-        const loadingScreen = document.getElementById('loading-screen');
         const loadingMessage = document.getElementById('loading-message');
-        const progressBar = document.getElementById('progress-bar');
-        const gameContainer = document.getElementById('game-container');
-        const debugInfo = document.getElementById('debug-info');
-        
-        const GAME_FILE_NAME = "main.py";
-        // Index URL is back to v0.25.1
-        const PYODIDE_INDEX_URL = "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/";
-        
-        // Using the preferred package name for the Community Edition
-        const PYGAME_PACKAGE_NAME = "pygame-ce"; 
+        const outputContainer = document.getElementById('output-container');
+        const pythonOutput = document.getElementById('python-output');
+        const codeDisplay = document.getElementById('code-display');
 
+        // This Python code uses io and sys to capture the print output into a string that runPython returns.
+        const pythonCodeWithReturn = `
+import numpy as np
+import time
+import io
+import sys
 
-        function updateStatus(message, progress) {
-            loadingMessage.textContent = message;
-            progressBar.style.width = String(progress) + "%";
-            if (progress < 90) {
-                debugInfo.classList.remove('hidden');
-            }
-        }
+# Create a string buffer to capture stdout
+buffer = io.StringIO()
+sys.stdout = buffer
+
+# --- Original Code ---
+arr = np.arange(100000)
+start_time = time.time()
+result_array = np.sqrt(arr) * np.sin(arr / 100)
+end_time = time.time()
+mean_value = np.mean(result_array)
+execution_time = end_time - start_time
+print(f"Mean Value of Complex Array: {mean_value:.4f}")
+print(f"Time Taken (s): {execution_time:.4f}")
+print("\\n--- Array Head (First 5 values) ---")
+print(result_array[:5])
+# --- End Original Code ---
+
+# Restore stdout and return captured output
+sys.stdout = sys.__stdout__
+buffer.getvalue() # This is the string returned by runPython
+        `;
         
         async function initializePyodide() {
+            // Ensure loadPyodide is available globally before attempting to call it.
+            if (typeof loadPyodide === 'undefined') {
+                loadingMessage.textContent = "Error: Pyodide library failed to load globally. Check network connection or CDN status.";
+                outputContainer.classList.remove('hidden');
+                return;
+            }
+
             try {
-                console.log("Initializing Pyodide (using global method)...");
-                updateStatus("Downloading core Python environment...", 10);
-                
-                // Set the Pyodide index URL
-                const pyodide = await loadPyodide({
-                    indexURL: PYODIDE_INDEX_URL,
-                    onProgress: ({ totalBytes, loadedBytes }) => {
-                        const progress = Math.min(80, 10 + Math.floor((loadedBytes / totalBytes) * 70));
-                        updateStatus("Downloading modules... (" + (loadedBytes / 1024 / 1024).toFixed(1) + "MB)", progress);
-                    }
+                // Initialize Pyodide (now accessed globally)
+                // FIX: Updated indexURL to 0.25.1 to match the script tag.
+                let pyodide = await loadPyodide({
+                    indexURL: "https://cdn.jsdelivr.net/npm/pyodide@0.25.1/full/"
                 });
 
-                console.log("Pyodide loaded. Installing Pygame from the official index...");
-                updateStatus("Installing Pygame dependencies...", 85);
-                
-                // --- NATIVE LOAD PACKAGE (v34) ---
-                // Using loadPackage with the specific name 'pygame-ce'
-                console.log("Attempting native install of: " + PYGAME_PACKAGE_NAME);
-                
-                await pyodide.loadPackage(PYGAME_PACKAGE_NAME, {
-                    onProgress: ({ totalBytes, loadedBytes }) => {
-                        // This updates the bar during package installation
-                        const progress = Math.min(95, 85 + Math.floor((loadedBytes / totalBytes) * 10));
-                        updateStatus("Installing Pygame package...", progress);
-                    }
-                });
-                // ------------------------------------
+                loadingMessage.textContent = "Installing dependencies (numpy)...";
+                await pyodide.loadPackage("numpy");
 
-                console.log("Pygame installed successfully! Fetching your game code: " + GAME_FILE_NAME);
-                updateStatus("Fetching your game code...", 95);
+                loadingMessage.textContent = "Running Python code...";
                 
-                // Aggressive cache-bust version
-                const response = await fetch(GAME_FILE_NAME + "?v=34"); 
-                
-                console.log("Fetch response received. Status: " + response.status);
-                if (!response.ok) {
-                    throw new Error("ERROR: Failed to fetch main.py. File not found.");
-                }
-                const pythonCode = await response.text();
-                
-                console.log("Python code fetched. Writing to virtual file system...");
-                pyodide.FS.writeFile(GAME_FILE_NAME, pythonCode, { encoding: "utf8" });
+                // Display the code that is about to run
+                codeDisplay.textContent = pythonCodeWithReturn.trim();
 
-                updateStatus("Running game...", 100);
-                
-                const moduleName = GAME_FILE_NAME.slice(0,
-                    -3); 
-                console.log("Importing Python module: " + moduleName);
-                
-                // This runs your main.py file
-                await pyodide.runPythonAsync("import " + moduleName);
+                // Run the Python code and capture the output
+                const outputString = pyodide.runPython(pythonCodeWithReturn);
+                pythonOutput.textContent = outputString;
 
-                console.log("Game import successful. Hiding loading screen.");
-                loadingScreen.remove();
-                gameContainer.classList.remove('hidden');
-                
-                // The expected output of main.py will appear here if successful!
-                console.log("SUCCESS! The environment is ready. Check your game!");
 
+                loadingMessage.classList.add('hidden');
+                outputContainer.classList.remove('hidden');
 
             } catch (error) {
-                console.error("Pyodide or Pygame execution failed:", error);
-                
-                const errorMessage = error.name === 'PythonError' ? 
-                                     "PYTHON CODE CRASHED. Check console (F12) for traceback!" : 
-                                     "Loading Failed: " + error.message;
-                
-                updateStatus(errorMessage, 100);
-                loadingMessage.classList.add('text-red-500', 'font-bold');
+                loadingMessage.classList.add('hidden');
+                pythonOutput.textContent = `Failed to initialize Pyodide or execute code: ${error.message}`;
+                outputContainer.classList.remove('hidden');
+                outputContainer.innerHTML = '<div class="bg-red-100 p-4 rounded-lg border-l-4 border-red-500 text-red-800"><h2 class="text-xl font-bold">Error</h2><pre class="whitespace-pre-wrap">' + pythonOutput.textContent + '</pre></div>';
+                console.error("Pyodide execution failed:", error);
             }
         }
 
-        // Call the main function to start everything
         initializePyodide();
-
     </script>
 </body>
 </html>
