@@ -98,14 +98,12 @@
                     });
                 }
 
-                statusMessage.textContent = "Step 2/3: Installing Pygame-ce...";
-                loaderText.textContent = "Installing 'pygame-ce' (The Pygame for the web)...";
+                statusMessage.textContent = "Step 2/3: Installing Pygame...";
+                loaderText.textContent = "Installing 'pygame' (Official version with compatible wheel)...";
 
-                // FIX for ModuleNotFoundError: 
-                // We load micropip and then run a Python command to install 'pygame-ce'.
-                // This is more reliable as the Python environment handles the asynchronous nature of the install.
+                // *** FIX: Changed 'pygame-ce' to 'pygame' to use the version with a known compatible wheel. ***
                 await pyodide.loadPackage("micropip");
-                await pyodide.runPythonAsync("import micropip; await micropip.install('pygame-ce');");
+                await pyodide.runPythonAsync("import micropip; await micropip.install('pygame');");
 
 
                 // Clear the output area for the game canvas
@@ -124,7 +122,7 @@
                 // Display a user-friendly error message, including the Python error name
                 const pythonErrorName = error.name || 'Unknown Error';
                 loaderText.textContent = `Error loading game: ${pythonErrorName}. Check console for details.`;
-                statusMessage.textContent = "Game failed to load. Please see the console log for the full error. If the error is still 'ModuleNotFoundError: No module named 'pygame'', the Pyodide environment may be temporarily unstable.";
+                statusMessage.textContent = "Game failed to load. Please see the console log for the full error.";
                 startButton.disabled = false;
                 startButton.classList.remove('bg-gray-500');
                 startButton.classList.add('bg-red-600', 'hover:bg-red-700');
