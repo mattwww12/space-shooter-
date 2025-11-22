@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Python in Browser</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Switching to the official Pyodide CDN for stability -->
-    <script src="https://cdn.pyodide.org/pyodide-build/v0.24.0/full/pyodide.js"></script> 
+    <!-- Pyodide version 0.25.1 -->
+    <script src="https://cdn.pyodide.org/pyodide-build/v0.25.1/full/pyodide.js"></script> 
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
@@ -19,15 +19,16 @@
             <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-sky-400">Python Sandbox</span>
         </h1>
         
+        <!-- Action Button -->
+        <button id="startButton" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg font-bold text-lg mb-6 shadow-md shadow-indigo-500/50">
+            Initialize Python Environment
+        </button>
+
         <!-- Loading State -->
-        <div id="loading-message" class="text-center transition-opacity duration-500">
-            <div class="animate-pulse flex flex-col items-center">
-                <svg class="w-10 h-10 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7 7l7-7-7-7" />
-                </svg>
-                <p class="mt-4 text-xl font-medium text-indigo-300">Initializing Pyodide...</p>
-                <p class="text-sm text-gray-400 mt-2">Loading core Python environment and dependencies.</p>
-            </div>
+        <div id="loading-message" class="text-center transition-opacity duration-500 hidden">
+            <div class="animate-spin inline-block w-8 h-8 border-4 border-indigo-400 border-t-transparent rounded-full"></div>
+            <p class="mt-4 text-xl font-medium text-indigo-300">Initializing Pyodide...</p>
+            <p class="text-sm text-gray-400 mt-2">Loading core Python environment and dependencies.</p>
         </div>
 
         <!-- Output State -->
@@ -40,17 +41,30 @@
                 <h2 class="text-lg font-bold text-gray-200 mb-2">Python Output:</h2>
                 <pre id="python-output" class="text-sm font-mono whitespace-pre-wrap bg-gray-900 p-3 rounded text-yellow-400 overflow-x-auto"></pre>
             </div>
-            
-            <p class="mt-6 text-xs text-gray-400 text-center">
-                <code class="text-indigo-400">numpy</code> was used to run a fast array calculation.
-            </p>
+        </div>
+        
+        <!-- Error State (Initially hidden) -->
+        <div id="error-message-box" class="hidden mt-6">
+             <div class="bg-red-900/50 p-4 rounded-xl border-l-4 border-red-500 text-red-300">
+                <h2 class="text-xl font-bold">Initialization Error (v0.25.1)</h2>
+                <pre id="error-output" class="whitespace-pre-wrap mt-2 text-sm"></pre>
+                <p class="text-sm mt-3 text-red-400 font-semibold">
+                    💡 Troubleshooting: If you see "ERR_NAME_NOT_RESOLVED", the problem is your network's DNS. Try restarting your device or router.
+                </p>
+            </div>
         </div>
     </div>
 
     <script>
+        const startButton = document.getElementById('startButton');
         const loadingMessage = document.getElementById('loading-message');
         const outputContainer = document.getElementById('output-container');
         const pythonOutput = document.getElementById('python-output');
+        const errorMessageBox = document.getElementById('error-message-box');
+        const errorOutput = document.getElementById('error-output');
+        
+        let pyodideInstance = null;
+        let isRunning = false;
 
         // Python code to run, which uses numpy and captures print output
         const pythonCodeWithReturn = `
@@ -80,52 +94,66 @@ sys.stdout = sys.__stdout__
 buffer.getvalue()
         `;
         
+        function displayError(message) {
+            loadingMessage.classList.add('hidden');
+            outputContainer.classList.add('hidden');
+            errorMessageBox.classList.remove('hidden');
+            errorOutput.textContent = message;
+            startButton.classList.remove('hidden');
+            startButton.textContent = "Retry Initialization";
+            startButton.disabled = false;
+        }
+
         async function initializePyodide() {
+            if (isRunning) return;
+            isRunning = true;
+            
+            // Reset UI states
+            startButton.classList.add('hidden');
+            outputContainer.classList.add('hidden');
+            errorMessageBox.classList.add('hidden');
+            loadingMessage.classList.remove('hidden');
+
             if (typeof loadPyodide === 'undefined') {
-                displayError("Pyodide library failed to load globally. Check the external script tag or network connection.");
+                displayError("Pyodide script failed to load globally. Check network connection.");
+                isRunning = false;
                 return;
             }
 
-            function displayError(message) {
-                loadingMessage.classList.add('hidden');
-                outputContainer.classList.remove('hidden');
-                pythonOutput.textContent = message;
-                outputContainer.innerHTML = `
-                    <div class="bg-red-900/50 p-4 rounded-xl border-l-4 border-red-500 text-red-300">
-                        <h2 class="text-xl font-bold">Initialization Error (v0.24.0)</h2>
-                        <pre class="whitespace-pre-wrap mt-2">${message}</pre>
-                        <p class="text-sm mt-3 text-red-400">This is often due to temporary network issues fetching core files. We switched the CDN to try and fix this.</p>
-                    </div>`;
-            }
-
             try {
-                // Initialize Pyodide using the official Pyodide CDN for stability
-                let pyodide = await loadPyodide({
-                    indexURL: "https://cdn.pyodide.org/pyodide-build/v0.24.0/full/"
+                // Initialize Pyodide
+                pyodideInstance = await loadPyodide({
+                    // Must match the version in the <script> tag above
+                    indexURL: "https://cdn.pyodide.org/pyodide-build/v0.25.1/full/" 
                 });
 
                 // Update loading status
                 document.querySelector('#loading-message p:last-child').textContent = "Installing dependencies (numpy)...";
-                await pyodide.loadPackage("numpy");
+                await pyodideInstance.loadPackage("numpy");
 
                 // Update loading status
                 document.querySelector('#loading-message p:last-child').textContent = "Running Python code...";
                 
                 // Run the Python code and capture the output
-                const outputString = pyodide.runPython(pythonCodeWithReturn);
+                const outputString = pyodideInstance.runPython(pythonCodeWithReturn);
                 pythonOutput.textContent = outputString;
 
                 // Hide loading, show output
                 loadingMessage.classList.add('hidden');
                 outputContainer.classList.remove('hidden');
+                isRunning = false;
 
             } catch (error) {
                 console.error("Pyodide initialization failed:", error);
                 displayError(`Error: ${error.message}`);
+                isRunning = false;
             }
         }
-
-        initializePyodide();
+        
+        startButton.addEventListener('click', initializePyodide);
+        
+        // Optionally, run automatically on load if desired, but user can always retry with button
+        // initializePyodide();
     </script>
 </body>
 </html>
