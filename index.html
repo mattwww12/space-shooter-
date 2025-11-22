@@ -3,31 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python in Browser</title>
+    <title>Python in Browser (Alternative CDN)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Pyodide version 0.25.1 -->
-    <script src="https://cdn.pyodide.org/pyodide-build/v0.25.1/full/pyodide.js"></script> 
+    <!-- Pyodide v0.25.1 loaded from alternative CDN (jsdelivr) to bypass DNS issues -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script> 
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
 <body class="bg-gray-900 min-h-screen flex items-center justify-center p-4">
 
-    <div id="app-container" class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-xl text-white border-4 border-indigo-500/50">
+    <div id="app-container" class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-xl text-white border-4 border-emerald-500/50">
         
-        <h1 class="text-3xl font-extrabold text-indigo-400 mb-6 text-center">
-            <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-sky-400">Python Sandbox</span>
+        <h1 class="text-3xl font-extrabold text-emerald-400 mb-6 text-center">
+            <span class="bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 to-teal-400">Python Sandbox (CDN Fixed)</span>
         </h1>
         
         <!-- Action Button -->
-        <button id="startButton" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 rounded-lg font-bold text-lg mb-6 shadow-md shadow-indigo-500/50">
+        <button id="startButton" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 transition-colors duration-200 rounded-lg font-bold text-lg mb-6 shadow-md shadow-emerald-500/50">
             Initialize Python Environment
         </button>
 
         <!-- Loading State -->
         <div id="loading-message" class="text-center transition-opacity duration-500 hidden">
-            <div class="animate-spin inline-block w-8 h-8 border-4 border-indigo-400 border-t-transparent rounded-full"></div>
-            <p class="mt-4 text-xl font-medium text-indigo-300">Initializing Pyodide...</p>
+            <div class="animate-spin inline-block w-8 h-8 border-4 border-emerald-400 border-t-transparent rounded-full"></div>
+            <p class="mt-4 text-xl font-medium text-emerald-300">Initializing Pyodide...</p>
             <p class="text-sm text-gray-400 mt-2">Loading core Python environment and dependencies.</p>
         </div>
 
@@ -49,7 +49,7 @@
                 <h2 class="text-xl font-bold">Initialization Error (v0.25.1)</h2>
                 <pre id="error-output" class="whitespace-pre-wrap mt-2 text-sm"></pre>
                 <p class="text-sm mt-3 text-red-400 font-semibold">
-                    💡 Troubleshooting: If you see "ERR_NAME_NOT_RESOLVED", the problem is your network's DNS. Try restarting your device or router.
+                    💡 Troubleshooting: If you still see "ERR_NAME_NOT_RESOLVED", the problem is external to this code (network/DNS block).
                 </p>
             </div>
         </div>
@@ -121,10 +121,9 @@ buffer.getvalue()
             }
 
             try {
-                // Initialize Pyodide
+                // Initialize Pyodide, pointing the indexURL to the new jsdelivr CDN
                 pyodideInstance = await loadPyodide({
-                    // Must match the version in the <script> tag above
-                    indexURL: "https://cdn.pyodide.org/pyodide-build/v0.25.1/full/" 
+                    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/" 
                 });
 
                 // Update loading status
@@ -151,9 +150,6 @@ buffer.getvalue()
         }
         
         startButton.addEventListener('click', initializePyodide);
-        
-        // Optionally, run automatically on load if desired, but user can always retry with button
-        // initializePyodide();
     </script>
 </body>
 </html>
