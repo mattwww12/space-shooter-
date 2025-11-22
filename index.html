@@ -3,62 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pyodide Micropip Fix</title>
+    <title>Space Shooter Pygame</title>
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Pyodide (Python in the browser) -->
+    <!-- Using v0.25.1 for maximum compatibility -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #1a1a2e; /* Dark theme */
+        }
+        #game-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 2rem auto;
+            background-color: #0d0d18;
+            border: 4px solid #4a4e69;
+            box-shadow: 0 0 30px rgba(74, 78, 105, 0.5);
+            border-radius: 12px;
+        }
+        /* Custom Pygame Canvas style */
+        #python-output {
+            background-color: black;
+            height: 400px; /* Game viewport size */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #b0c4de;
+            font-size: 1.25rem;
+            text-align: center;
+            border-radius: 6px;
+        }
+        button {
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+<body class="p-4">
 
-    <div class="max-w-3xl w-full bg-white shadow-xl rounded-xl p-8 space-y-6">
-        <h1 class="text-3xl font-bold text-gray-800 border-b pb-2">Pyodide Environment Loader</h1>
-        
-        <div id="loading" class="text-center p-4">
-            <div class="flex items-center justify-center space-x-2">
-                <div class="w-4 h-4 bg-indigo-500 rounded-full animate-pulse"></div>
-                <div class="w-4 h-4 bg-indigo-500 rounded-full animate-pulse delay-150"></div>
-                <div class="w-4 h-4 bg-indigo-500 rounded-full animate-pulse delay-300"></div>
-                <p class="text-indigo-600 font-medium">Initializing Pyodide and loading packages...</p>
+    <div class="min-h-screen flex flex-col items-center">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-indigo-400">Pyodide Space Shooter</h1>
+            <p class="text-gray-300 mt-2">Running Pygame directly in the browser.</p>
+        </header>
+
+        <div id="game-container" class="p-4">
+
+            <div id="status-message" class="text-center text-gray-300 mb-4 font-semibold">
+                Click the button below to start the Python environment.
             </div>
-        </div>
 
-        <div id="output" class="hidden">
-            <h2 class="text-xl font-semibold mb-3 text-gray-700">Python Output</h2>
-            <pre id="python-output" class="bg-gray-800 text-green-400 p-4 rounded-lg overflow-x-auto text-sm"></pre>
-        </div>
-        
-        <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-            <strong class="font-bold">Error:</strong>
-            <span class="block sm:inline" id="error-text"></span>
+            <button id="start-button"
+                    class="w-full py-3 bg-green-600 text-white font-bold rounded-lg shadow-xl hover:bg-green-700 transition duration-150 ease-in-out"
+                    onclick="initializePyodideAndRunGame()">
+                Start Game (Load Pygame)
+            </button>
+
+            <!-- This is where Pygame's canvas will be injected. -->
+            <div id="python-output" class="mt-4">
+                <span id="loader-text">Awaiting startup...</span>
+            </div>
+
         </div>
     </div>
 
-    <script>
-        // Set up constants for elements
-        const loadingElement = document.getElementById('loading');
-        const outputElement = document.getElementById('output');
-        const pythonOutputElement = document.getElementById('python-output');
-        const errorElement = document.getElementById('error-message');
-        const errorTextElement = document.getElementById('error-text');
+    <script type="text/javascript">
+        let pyodide = null;
+        const loaderText = document.getElementById('loader-text');
+        const statusMessage = document.getElementById('status-message');
+        const startButton = document.getElementById('start-button');
+        const pythonOutputDiv = document.getElementById('python-output');
 
-        // Main function to run Pyodide
-        async function main() {
+        async function initializePyodideAndRunGame() {
+            startButton.disabled = true;
+            startButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+            startButton.classList.add('bg-gray-500');
+            statusMessage.textContent = "Step 1/3: Downloading Pyodide environment...";
+            loaderText.textContent = "Initializing Pyodide...";
+
             try {
-                // Initialize Pyodide
-                const pyodide = await loadPyodide();
-                
-                // IMPORTANT FIX: Load the 'micropip' package explicitly in JavaScript
-                // This resolves the ModuleNotFoundError before the Python code executes.
-                await pyodide.loadPackage('micropip'); 
-                
-                loadingElement.classList.add('hidden');
-                outputElement.classList.remove('hidden');
+                if (!pyodide) {
+                    pyodide = await loadPyodide({
+                        indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/",
+                        stdin: () => prompt('Input:'),
+                        stdout: (text) => console.log('Python STDOUT:', text),
+                        stderr: (text) => console.error('Python STDERR:', text)
+                    });
+                }
 
-                // --- Python Code to Run ---
-                const pythonCode = `
+                statusMessage.textContent = "Step 2/3: Installing Pygame-ce...";
+                loaderText.textContent = "Installing 'pygame-ce' (The Pygame for the web)...";
+
+                // FIX for ModuleNotFoundError: 
+                // We load micropip and then run a Python command to install 'pygame-ce'.
+                // This is more reliable as the Python environment handles the asynchronous nature of the install.
+                await pyodide.loadPackage("micropip");
+                await pyodide.runPythonAsync("import micropip; await micropip.install('pygame-ce');");
+
+
+                // Clear the output area for the game canvas
+                pythonOutputDiv.innerHTML = '';
+                statusMessage.textContent = "Step 3/3: Running Game Code...";
+
+                // Execute the Python code embedded below, ensuring no leading/trailing whitespace.
+                const codeToRun = document.getElementById('game-script').textContent.trim();
+                await pyodide.runPythonAsync(codeToRun);
+
+                statusMessage.textContent = "Game is running! Use LEFT/RIGHT arrows or A/D to move, SPACE to shoot.";
+                startButton.style.display = 'none';
+
+            } catch (error) {
+                console.error("Failed to run Python/Pygame:", error);
+                // Display a user-friendly error message, including the Python error name
+                const pythonErrorName = error.name || 'Unknown Error';
+                loaderText.textContent = `Error loading game: ${pythonErrorName}. Check console for details.`;
+                statusMessage.textContent = "Game failed to load. Please see the console log for the full error. If the error is still 'ModuleNotFoundError: No module named 'pygame'', the Pyodide environment may be temporarily unstable.";
+                startButton.disabled = false;
+                startButton.classList.remove('bg-gray-500');
+                startButton.classList.add('bg-red-600', 'hover:bg-red-700');
+            }
+        }
+
+    </script>
+
+    <!--
+        ================================================================================
+        IMPORTANT: THE PYTHON CODE MUST START ON THE VERY FIRST CHARACTER OF THE NEXT LINE
+        (no spaces before 'import pygame' below)
+        ================================================================================
+    -->
+    <script type="text/python" id="game-script">
 import pygame
 import random
 import sys
@@ -1443,24 +1524,7 @@ while running:
 save_config()
 pygame.quit()
 sys.exit()
-                `;
-
-                // Run the Python code and capture the output
-                const result = await pyodide.runPythonAsync(pythonCode);
-                
-                // Print the result (which is usually the output of print() statements)
-                pythonOutputElement.textContent = pyodide.globals.get('stdout');
-
-            } catch (error) {
-                loadingElement.classList.add('hidden');
-                errorElement.classList.remove('hidden');
-                console.error("Pyodide execution failed:", error);
-                errorTextElement.textContent = "An error occurred during Pyodide execution. Check the console for details. (Error: " + error.name + ")";
-            }
-        }
-
-        // We run the main function when the script loads
-        main();
     </script>
+
 </body>
 </html>
