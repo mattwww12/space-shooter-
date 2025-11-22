@@ -31,7 +31,7 @@
     <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
         <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
         <!-- Confirmed Fix: This version tag helps us confirm the latest code is running. -->
-        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v33 - Back to v0.25.1, using micropip to install 'pygame-ce')</span></div>
+        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v34 - Reverting to native loadPackage('pygame-ce') on v0.25.1)</span></div>
         
         <!-- Loading Bar -->
         <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
@@ -64,7 +64,8 @@
         // Index URL is back to v0.25.1
         const PYODIDE_INDEX_URL = "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/";
         
-        const PYGAME_PACKAGE_NAME = "pygame-ce"; // Use the PyPI name
+        // Using the preferred package name for the Community Edition
+        const PYGAME_PACKAGE_NAME = "pygame-ce"; 
 
 
         function updateStatus(message, progress) {
@@ -89,27 +90,27 @@
                     }
                 });
 
-                console.log("Pyodide loaded. Installing micropip and Pygame...");
+                console.log("Pyodide loaded. Installing Pygame from the official index...");
                 updateStatus("Installing Pygame dependencies...", 85);
                 
-                // Load micropip first
-                await pyodide.loadPackage("micropip"); 
+                // --- NATIVE LOAD PACKAGE (v34) ---
+                // Using loadPackage with the specific name 'pygame-ce'
+                console.log("Attempting native install of: " + PYGAME_PACKAGE_NAME);
                 
-                // --- MICROPIP INSTALL (v33) ---
-                // Tell micropip to install pygame-ce, relying on Pyodide to find the pre-compiled wheel.
-                console.log("Attempting micropip install of: " + PYGAME_PACKAGE_NAME);
-                
-                await pyodide.runPythonAsync(`
-                    import micropip
-                    await micropip.install('${PYGAME_PACKAGE_NAME}')
-                `);
+                await pyodide.loadPackage(PYGAME_PACKAGE_NAME, {
+                    onProgress: ({ totalBytes, loadedBytes }) => {
+                        // This updates the bar during package installation
+                        const progress = Math.min(95, 85 + Math.floor((loadedBytes / totalBytes) * 10));
+                        updateStatus("Installing Pygame package...", progress);
+                    }
+                });
                 // ------------------------------------
 
                 console.log("Pygame installed successfully! Fetching your game code: " + GAME_FILE_NAME);
                 updateStatus("Fetching your game code...", 95);
                 
                 // Aggressive cache-bust version
-                const response = await fetch(GAME_FILE_NAME + "?v=33"); 
+                const response = await fetch(GAME_FILE_NAME + "?v=34"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
