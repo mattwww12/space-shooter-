@@ -31,7 +31,7 @@
     <div id="loading-screen" class="container flex flex-col justify-center items-center p-4">
         <h1 class="text-4xl font-bold mb-4 text-cyan-400">Space Shooter: Web Version</h1>
         <!-- Confirmed Fix: This version tag helps us confirm the latest code is running. -->
-        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v21)</span></div>
+        <div class="text-xl mb-6">Powered by Python and Pyodide <span class="text-sm text-yellow-500">(v22)</span></div>
         
         <!-- Loading Bar -->
         <div class="w-80 h-4 bg-gray-700 rounded-full overflow-hidden shadow-inner">
@@ -62,6 +62,7 @@
         const debugInfo = document.getElementById('debug-info');
         
         const GAME_FILE_NAME = "main.py";
+        const PYODIDE_INDEX_URL = "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/";
 
         function updateStatus(message, progress) {
             loadingMessage.textContent = message;
@@ -76,26 +77,26 @@
                 console.log("Initializing Pyodide (using global method)...");
                 updateStatus("Downloading core Python environment...", 10);
                 
-                // Correct path is to the 'full' directory
+                // Set the Pyodide index URL
                 const pyodide = await loadPyodide({
-                    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/",
+                    indexURL: PYODIDE_INDEX_URL,
                     onProgress: ({ totalBytes, loadedBytes }) => {
                         const progress = Math.min(80, 10 + Math.floor((loadedBytes / totalBytes) * 70));
                         updateStatus("Downloading modules... (" + (loadedBytes / 1024 / 1024).toFixed(1) + "MB)", progress);
                     }
                 });
 
-                console.log("Pyodide loaded. Installing micropip and Pygame-web...");
+                console.log("Pyodide loaded. Installing micropip and Pygame-ce from the Pyodide index...");
                 updateStatus("Installing Pygame dependencies...", 85);
                 
                 await pyodide.loadPackage("micropip"); // Load the installer utility
 
-                // --- THE PYGAME-WEB FIX (v21) ---
-                // Try the Pygame WASM specific name using micropip
+                // --- THE MICROPIP INDEX URL FIX (v22) ---
+                // We explicitly set the Pyodide repo as the only source for micropip
                 await pyodide.runPythonAsync(
                     "import micropip\n" +
-                    // Using 'pygame-web' which is a common WASM package alias
-                    "await micropip.install('pygame-web')" 
+                    // Using 'pygame-ce' which is the common name, and force the Pyodide index.
+                    `await micropip.install('pygame-ce', index_urls=['${PYODIDE_INDEX_URL}'])\n` 
                 );
                 // ------------------------------------
 
@@ -103,7 +104,7 @@
                 updateStatus("Fetching your game code...", 95);
                 
                 // Aggressive cache-bust version
-                const response = await fetch(GAME_FILE_NAME + "?v=21"); 
+                const response = await fetch(GAME_FILE_NAME + "?v=22"); 
                 
                 console.log("Fetch response received. Status: " + response.status);
                 if (!response.ok) {
@@ -127,6 +128,7 @@
                 loadingScreen.remove();
                 gameContainer.classList.remove('hidden');
                 
+                // The expected output of main.py will appear here if successful!
                 console.log("SUCCESS! The environment is ready. Check your game!");
 
 
